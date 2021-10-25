@@ -1,34 +1,26 @@
 const { PrismaClient } = require("@prisma/client");
-
+const { ApolloServer, gql } = require("apollo-server");
 const prisma = new PrismaClient();
 
-async function main() {
-  await prisma.user.create({
-    data: {
-      name: "Alice",
-      email: "alice@prisma.io",
-      posts: {
-        create: { title: "Hello World" },
-      },
-      profile: {
-        create: { bio: "I like turtles" },
-      },
+const typeDefs = gql`
+  type User {
+    email: String!
+    name: String
+  }
+  type Query {
+    allUsers: [User!]!
+  }
+`;
+const resolvers = {
+  Query: {
+    allUsers: () => {
+      return prisma.user.findMany();
     },
-  });
+  },
+};
 
-  const allUsers = await prisma.user.findMany({
-    include: {
-      posts: true,
-      profile: true,
-    },
-  });
-  console.dir(allUsers, { depth: null });
-}
+const server = new ApolloServer({ typeDefs, resolvers });
 
-main()
-  .catch((e) => {
-    throw e;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+server.listen().then(({ url }) => {
+  console.log(`🚀  Server ready at ${url}`);
+});
